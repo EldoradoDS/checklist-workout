@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checklist Semanal — Recomposição</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1419;
+    --card: #1a2028;
+    --card-hover: #232a35;
+    --border: #2a3441;
+    --text: #e8eef5;
+    --text-dim: #8b95a3;
+    --accent: #4ade80;
+    --done: #22c55e;
+    --danger: #ef4444;
+    --workout: #60a5fa;
+    --meal: #fbbf24;
+    --cardio: #f472b6;
+  }
+
+  html, body { width: 100%; overflow-x: hidden; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  h1 { font-size: 22px; font-weight: 700; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-top: 4px; }
+
+  .progress-bar {
+    background: var(--card);
+    border-radius: 8px;
+    padding: 12px 16px;
+    min-width: 200px;
+    border: 1px solid var(--border);
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .progress-track {
+    background: var(--bg);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    background: linear-gradient(90deg, var(--accent), var(--done));
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+  }
+
+  .days-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .day-card {
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .day-card.today {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .day-card.complete { opacity: 0.65; }
+
+  .day-header {
+    padding: 14px 16px;
+    background: linear-gradient(135deg, var(--card-hover), var(--card));
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .day-name { font-weight: 700; font-size: 16px; }
+
+  .day-tag {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  .day-progress {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+
+  .day-progress.complete { color: var(--accent); }
+
+  .section {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section:last-child { border-bottom: none; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    color: var(--text-dim);
+  }
+
+  .section-header .time {
+    margin-left: auto;
+    font-weight: 500;
+    color: var(--text-dim);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .section-header.workout { color: var(--workout); }
+  .section-header.meal { color: var(--meal); }
+  .section-header.cardio { color: var(--cardio); }
+
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .item:active { opacity: 0.7; }
+
+  .checkbox-visual {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg);
+    position: relative;
+    margin-top: 1px;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+
+  .item.checked .checkbox-visual {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .item.checked .checkbox-visual::after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 11px;
+    border: solid #0f1419;
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+  }
+
+  .item-text {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.45;
+    word-wrap: break-word;
+  }
+
+  .item.checked .item-text {
+    color: var(--text-dim);
+    text-decoration: line-through;
+  }
+
+  .item-detail {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+
+  .footer {
+    margin-top: 32px;
+    padding: 20px;
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+
+  .reset-btn {
+    background: var(--danger);
+    color: white;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .reset-btn:active { background: #dc2626; transform: scale(0.98); }
+
+  .footer-note { margin-top: 12px; font-size: 12px; color: var(--text-dim); }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    font-size: 12px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+  }
+
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .stat-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .stat-card {
+    flex: 1;
+    min-width: 110px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .stat-value { font-size: 22px; font-weight: 700; color: var(--accent); }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 12px; }
+    h1 { font-size: 18px; }
+    .days-grid { grid-template-columns: 1fr; gap: 12px; }
+    header { flex-direction: column; align-items: stretch; }
+    .progress-bar { width: 100%; }
+    .stat-card { min-width: 0; flex: 1 1 calc(50% - 6px); }
+    .item { padding: 12px 0; }
+    .item-text { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Checklist Semanal — Recomposição</h1>
+    <div class="subtitle">96 kg → meta 84 kg • Foco: cintura, ombro lateral, panturrilha, antebraço</div>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-label">
+      <span>Progresso da semana</span>
+      <span id="weekPercent">0%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="weekProgress" style="width: 0%"></div>
+    </div>
+  </div>
+</header>
+
+<div class="stat-row">
+  <div class="stat-card">
+    <div class="stat-value" id="totalDone">0</div>
+    <div class="stat-label">Itens feitos</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="totalItems">0</div>
+    <div class="stat-label">Total da semana</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="daysComplete">0</div>
+    <div class="stat-label">Dias completos</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="streak">0</div>
+    <div class="stat-label">Streak</div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot" style="background: var(--workout)"></span>Treino</div>
+  <div class="legend-item"><span class="legend-dot" style="background: var(--cardio)"></span>Cardio / Caminhada</div>
+  <div class="legend-item"><span class="legend-dot" style="background: var(--meal)"></span>Alimentação</div>
+</div>
+
+<div class="days-grid" id="daysGrid"></div>
+
+<div class="footer">
+  <button class="reset-btn" onclick="resetWeek()">🔄 Resetar Semana</button>
+  <div class="footer-note">Os dados ficam salvos automaticamente no seu navegador.</div>
+</div>
+
+<script>
+const week = [
+  {
+    name: "Segunda",
+    tag: "Pull A — Costas + Bíceps + Antebraço",
+    sections: [
+      { type: "meal", icon: "☕", title: "Manhã", time: "ao acordar",
+        items: [ { text: "Café preto + 5g creatina + água" } ] },
+      { type: "workout", icon: "🏋️", title: "Treino", time: "meio-dia em jejum",
+        items: [
+          { text: "Barra fixa pesada ou puxada frente", detail: "2 séries × 4–6 reps" },
+          { text: "Remada curvada barra", detail: "2 séries × 6–8 reps" },
+          { text: "Remada cavalinho ou serrote", detail: "2 séries × 8 reps" },
+          { text: "Rosca direta barra", detail: "2 séries × 6–8 reps" },
+          { text: "Rosca punho barra (antebraço)", detail: "3 séries × 12–15 reps" },
+        ] },
+      { type: "cardio", icon: "🔥", title: "Cardio intervalado", time: "pós-treino",
+        items: [ { text: "HIIT esteira 15 min", detail: "3min aq + 8x(30s @12-14km/h + 60s @5km/h) + 3min recuperação" } ] },
+      { type: "meal", icon: "🍽️", title: "Almoço", time: "pós-treino",
+        items: [
+          { text: "Regra 50/25/25", detail: "Metade vegetal, 1/4 proteína, 1/4 carbo. Sem repetir." },
+          { text: "Proteína no prato (ovo/frango/carne)", detail: "Se a refeição tem pouco, adicionar 2 ovos extras" },
+        ] },
+      { type: "meal", icon: "🥚", title: "Lanche da tarde", time: "~16h",
+        items: [ { text: "Snack proteico", detail: "2 ovos cozidos OU 1 lata sardinha OU 1 copo leite + fruta" } ] },
+      { type: "meal", icon: "🌙", title: "Jantar", time: "noite",
+        items: [
+          { text: "Regra 50/25/25", detail: "Sem repetir o prato" },
+          { text: "Zero líquido calórico no dia", detail: "Sem refri, suco caixinha, cerveja" },
+        ] },
+    ]
+  },
+  {
+    name: "Terça",
+    tag: "Legs A — Quadríceps + Panturrilha",
+    sections: [
+      { type: "meal", icon: "☕", title: "Manhã", time: "ao acordar",
+        items: [ { text: "Café preto + 5g creatina + água" } ] },
+      { type: "workout", icon: "🏋️", title: "Treino", time: "meio-dia em jejum",
+        items: [
+          { text: "Agachamento livre", detail: "2 séries × 4–6 reps" },
+          { text: "Leg press 45°", detail: "2 séries × 6–8 reps" },
+          { text: "Cadeira extensora", detail: "2 séries × 8–10 reps" },
+          { text: "Panturrilha em pé", detail: "4 séries × 10–12 reps, pausa 2s embaixo" },
+        ] },
+      { type: "cardio", icon: "🚶", title: "Caminhada pós-treino", time: "após academia",
+        items: [ { text: "20 min esteira leve", detail: "Recuperação, sem inclinação alta" } ] },
+      { type: "meal", icon: "🍽️", title: "Almoço", time: "pós-treino",
+        items: [ { text: "Regra 50/25/25" }, { text: "Proteína no prato" } ] },
+      { type: "meal", icon: "🥚", title: "Lanche da tarde", time: "~16h",
+        items: [ { text: "Snack proteico" } ] },
+      { type: "meal", icon: "🌙", title: "Jantar", time: "noite",
+        items: [ { text: "Regra 50/25/25" }, { text: "Zero líquido calórico no dia" } ] },
+    ]
+  },
+  {
+    name: "Quarta",
+    tag: "Push B — Ombro-foco ⭐",
+    sections: [
+      { type: "meal", icon: "☕", title: "Manhã", time: "ao acordar",
+        items: [ { text: "Café preto + 5g creatina + água" } ] },
+      { type: "workout", icon: "🏋️", title: "Treino", time: "meio-dia em jejum",
+        items: [
+          { text: "Desenvolvimento militar barra ou halter", detail: "2 séries × 4–6 reps" },
+          { text: "Elevação lateral halter ⭐", detail: "3 séries × 8–10 reps (prioridade)" },
+          { text: "Supino inclinado fechado", detail: "2 séries × 6–8 reps" },
+          { text: "Tríceps corda", detail: "2 séries × 8–10 reps" },
+        ] },
+      { type: "cardio", icon: "🚶", title: "Caminhada pós-treino", time: "após academia",
+        items: [ { text: "20–30 min esteira inclinada", detail: "Inclinação 6–10, vel 5–6 km/h" } ] },
+      { type: "meal", icon: "🍽️", title: "Almoço", time: "pós-treino",
+        items: [ { text: "Regra 50/25/25" }, { text: "Proteína no prato" } ] },
+      { type: "meal", icon: "🥚", title: "Lanche da tarde", time: "~16h",
+        items: [ { text: "Snack proteico" } ] },
+      { type: "meal", icon: "🌙", title: "Jantar", time: "noite",
+        items: [ { text: "Regra 50/25/25" }, { text: "Zero líquido calórico no dia" } ] },
+    ]
+  },
+  {
+    name: "Quinta",
+    tag: "Pull B — Costas largura + Antebraço + Panturrilha",
+    sections: [
+      { type: "meal", icon: "☕", title: "Manhã", time: "ao acordar",
+        items: [ { text: "Café preto + 5g creatina + água" } ] },
+      { type: "workout", icon: "🏋️", title: "Treino", time: "meio-dia em jejum",
+        items: [
+          { text: "Puxada frente pegada aberta", detail: "2 séries × 6–8 reps" },
+          { text: "Remada baixa pegada neutra", detail: "2 séries × 6–8 reps" },
+          { text: "Pullover halter ou máquina", detail: "2 séries × 8–10 reps" },
+          { text: "Rosca martelo", detail: "2 séries × 6–8 reps" },
+          { text: "Rosca punho inverso (antebraço)", detail: "3 séries × 12–15 reps" },
+          { text: "Panturrilha em pé unilateral", detail: "3 séries × 12–15 cada perna" },
+          { text: "Farmer's walk (opcional)", detail: "2 séries × 30 seg com halteres pesados" },
+        ] },
+      { type: "cardio", icon: "🔥", title: "Cardio intervalado", time: "pós-treino",
+        items: [ { text: "HIIT esteira 15 min", detail: "3min aq + 8x(30s @12-14km/h + 60s @5km/h) + 3min recuperação" } ] },
+      { type: "meal", icon: "🍽️", title: "Almoço", time: "pós-treino",
+        items: [ { text: "Regra 50/25/25" }, { text: "Proteína no prato" } ] },
+      { type: "meal", icon: "🥚", title: "Lanche da tarde", time: "~16h",
+        items: [ { text: "Snack proteico" } ] },
+      { type: "meal", icon: "🌙", title: "Jantar", time: "noite",
+        items: [ { text: "Regra 50/25/25" }, { text: "Zero líquido calórico no dia" } ] },
+    ]
+  },
+  {
+    name: "Sexta",
+    tag: "Legs B leve — Posterior + Panturrilha",
+    sections: [
+      { type: "meal", icon: "☕", title: "Manhã", time: "ao acordar",
+        items: [ { text: "Café preto + 5g creatina + água" } ] },
+      { type: "workout", icon: "🏋️", title: "Treino", time: "meio-dia em jejum",
+        items: [
+          { text: "Stiff barra", detail: "2 séries × 6–8 reps" },
+          { text: "Mesa flexora", detail: "2 séries × 8–10 reps" },
+          { text: "Cadeira adutora ou afundo curto", detail: "2 séries × 8 reps" },
+          { text: "Panturrilha sentado", detail: "4 séries × 15–20 reps" },
+        ] },
+      { type: "cardio", icon: "🏃", title: "Cardio punitivo", time: "pós-treino",
+        items: [ { text: "Tempo run OU inclinação punitiva", detail: "Alternar: 1km all-out (~6min) OU 20min inclinação 12-15 a 5-6km/h" } ] },
+      { type: "meal", icon: "🍽️", title: "Almoço", time: "pós-treino",
+        items: [ { text: "Regra 50/25/25" }, { text: "Proteína no prato" } ] },
+      { type: "meal", icon: "🥚", title: "Lanche da tarde", time: "~16h",
+        items: [ { text: "Snack proteico" } ] },
+      { type: "meal", icon: "🌙", title: "Jantar", time: "noite",
+        items: [ { text: "Regra 50/25/25" }, { text: "Zero líquido calórico no dia" } ] },
+    ]
+  },
+  {
+    name: "Sábado",
+    tag: "Push A — Peito + Tríceps",
+    sections: [
+      { type: "meal", icon: "☕", title: "Manhã", time: "ao acordar",
+        items: [ { text: "Café preto + 5g creatina + água" } ] },
+      { type: "workout", icon: "🏋️", title: "Treino", time: "horário flexível",
+        items: [
+          { text: "Supino reto barra", detail: "2 séries × 4–6 reps até falha" },
+          { text: "Supino inclinado halter", detail: "2 séries × 6–8 reps" },
+          { text: "Crucifixo máquina ou cross", detail: "2 séries × 8–10 reps" },
+          { text: "Tríceps testa ou paralela", detail: "2 séries × 6–8 reps" },
+        ] },
+      { type: "cardio", icon: "🚶", title: "Caminhada pós-treino", time: "após academia",
+        items: [ { text: "20–30 min esteira inclinada", detail: "Inclinação 6–10, vel 5–6 km/h" } ] },
+      { type: "meal", icon: "🍽️", title: "Almoço", time: "pós-treino",
+        items: [
+          { text: "Regra 50/25/25", detail: "Metade vegetal, 1/4 proteína, 1/4 carbo. Sem repetir." },
+          { text: "Proteína no prato (ovo/frango/carne)" },
+        ] },
+      { type: "meal", icon: "🥚", title: "Lanche da tarde", time: "~16h",
+        items: [ { text: "Snack proteico" } ] },
+      { type: "meal", icon: "🌙", title: "Jantar", time: "noite",
+        items: [ { text: "Regra 50/25/25" }, { text: "Zero líquido calórico no dia" } ] },
+    ]
+  },
+  {
+    name: "Domingo",
+    tag: "Descanso total",
+    sections: [
+      { type: "meal", icon: "☕", title: "Manhã", time: "ao acordar",
+        items: [ { text: "Café preto + 5g creatina + água" } ] },
+      { type: "meal", icon: "🍽️", title: "Almoço", time: "horário normal",
+        items: [ { text: "Regra 50/25/25" }, { text: "Proteína no prato" } ] },
+      { type: "meal", icon: "🥚", title: "Lanche da tarde", time: "~16h",
+        items: [ { text: "Snack proteico" } ] },
+      { type: "meal", icon: "🌙", title: "Jantar", time: "noite",
+        items: [ { text: "Regra 50/25/25" }, { text: "Zero líquido calórico no dia" } ] },
+      { type: "cardio", icon: "🛌", title: "Recuperação", time: "dia todo",
+        items: [
+          { text: "Dormir 7–8h", detail: "Recuperação muscular acontece no sono" },
+          { text: "Caminhada leve opcional", detail: "20–30 min lazer, sem esteira" },
+        ] },
+    ]
+  },
+];
+
+var STORAGE_KEY = 'checklist_recomp_v1';
+var state = {};
+
+function loadState() {
+  try {
+    var saved = localStorage.getItem(STORAGE_KEY);
+    state = saved ? JSON.parse(saved) : {};
+  } catch (e) { state = {}; }
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch (e) {}
+}
+
+function getItemKey(d, s, i) { return 'd' + d + '_s' + s + '_i' + i; }
+
+function getTodayIdx() {
+  var jsDay = new Date().getDay();
+  return jsDay === 0 ? 6 : jsDay - 1;
+}
+
+function toggleItem(key) {
+  state[key] = !state[key];
+  saveState();
+  render();
+}
+
+function render() {
+  var grid = document.getElementById('daysGrid');
+  grid.innerHTML = '';
+  var todayIdx = getTodayIdx();
+
+  for (var dayIdx = 0; dayIdx < week.length; dayIdx++) {
+    var day = week[dayIdx];
+    var totalItems = 0, doneItems = 0;
+    for (var sI = 0; sI < day.sections.length; sI++) {
+      for (var iI = 0; iI < day.sections[sI].items.length; iI++) {
+        totalItems++;
+        if (state[getItemKey(dayIdx, sI, iI)]) doneItems++;
+      }
+    }
+    var isComplete = doneItems === totalItems && totalItems > 0;
+    var isToday = dayIdx === todayIdx;
+
+    var card = document.createElement('div');
+    card.className = 'day-card' + (isToday ? ' today' : '') + (isComplete ? ' complete' : '');
+
+    var sectionsHtml = '';
+    for (var secIdx = 0; secIdx < day.sections.length; secIdx++) {
+      var sec = day.sections[secIdx];
+      var itemsHtml = '';
+      for (var itemIdx = 0; itemIdx < sec.items.length; itemIdx++) {
+        var item = sec.items[itemIdx];
+        var key = getItemKey(dayIdx, secIdx, itemIdx);
+        var isChecked = !!state[key];
+        var detailHtml = item.detail ? '<span class="item-detail">' + item.detail + '</span>' : '';
+        itemsHtml += '<div class="item' + (isChecked ? ' checked' : '') + '" data-key="' + key + '">' +
+                       '<span class="checkbox-visual"></span>' +
+                       '<span class="item-text">' + item.text + detailHtml + '</span>' +
+                     '</div>';
+      }
+
+      sectionsHtml += '<div class="section">' +
+                        '<div class="section-header ' + sec.type + '">' +
+                          '<span>' + sec.icon + '</span>' +
+                          '<span>' + sec.title + '</span>' +
+                          '<span class="time">' + sec.time + '</span>' +
+                        '</div>' +
+                        itemsHtml +
+                      '</div>';
+    }
+
+    card.innerHTML =
+      '<div class="day-header">' +
+        '<div>' +
+          '<div class="day-name">' + day.name + (isToday ? ' • Hoje' : '') + '</div>' +
+          '<div class="day-tag">' + day.tag + '</div>' +
+        '</div>' +
+        '<div class="day-progress' + (isComplete ? ' complete' : '') + '">' +
+          doneItems + '/' + totalItems + (isComplete ? ' ✓' : '') +
+        '</div>' +
+      '</div>' +
+      sectionsHtml;
+
+    grid.appendChild(card);
+  }
+
+  var items = document.querySelectorAll('.item[data-key]');
+  for (var k = 0; k < items.length; k++) {
+    (function(el) {
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        toggleItem(el.getAttribute('data-key'));
+      });
+    })(items[k]);
+  }
+
+  updateStats();
+}
+
+function updateStats() {
+  var total = 0, done = 0, daysComplete = 0;
+  for (var d = 0; d < week.length; d++) {
+    var dayTotal = 0, dayDone = 0;
+    for (var s = 0; s < week[d].sections.length; s++) {
+      for (var i = 0; i < week[d].sections[s].items.length; i++) {
+        dayTotal++; total++;
+        if (state[getItemKey(d, s, i)]) { done++; dayDone++; }
+      }
+    }
+    if (dayDone === dayTotal && dayTotal > 0) daysComplete++;
+  }
+
+  var streak = 0;
+  for (var dd = 0; dd < week.length; dd++) {
+    var dt = 0, dn = 0;
+    for (var ss = 0; ss < week[dd].sections.length; ss++) {
+      for (var ii = 0; ii < week[dd].sections[ss].items.length; ii++) {
+        dt++;
+        if (state[getItemKey(dd, ss, ii)]) dn++;
+      }
+    }
+    if (dn === dt && dt > 0) streak++;
+    else break;
+  }
+
+  var pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  document.getElementById('weekProgress').style.width = pct + '%';
+  document.getElementById('weekPercent').textContent = pct + '%';
+  document.getElementById('totalDone').textContent = done;
+  document.getElementById('totalItems').textContent = total;
+  document.getElementById('daysComplete').textContent = daysComplete;
+  document.getElementById('streak').textContent = streak;
+}
+
+function resetWeek() {
+  if (!confirm('Resetar todos os checks da semana?')) return;
+  state = {};
+  saveState();
+  render();
+}
+
+loadState();
+render();
+</script>
+
+</body>
+</html>
